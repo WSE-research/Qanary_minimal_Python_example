@@ -13,6 +13,7 @@ endif::[]
 = Qanary Minimal Question Answering Pipeline
 
 == Table of Contents
+
 toc::[]
 
 == Overview
@@ -25,6 +26,10 @@ The pipeline processes natural-language questions and generates answers by:
 3. **Query Execution (QE)**: Executing SPARQL queries against a SPARQL endpoint
 
 The system uses Wikidata as the knowledge base and Virtuoso as the triplestore for managing RDF data.
+
+For the sake of simplicity, the docker-compose.yml is kept with trivial components' settings where all components are in the host network.
+For the same reason, the Virtuoso configuration is predefined with dummy values. 
+Please change both, when moving toward production.
 
 == Architecture
 
@@ -82,6 +87,7 @@ The Named Entity Linking component:
 * Stores annotations in the Virtuoso triplestore
 
 **Configuration:**
+
 * Port: `40120`
 * Environment variables (via `.env` file):
   * `SERVICE_NAME_COMPONENT`: Component name
@@ -101,6 +107,7 @@ The Query Builder component:
 * Stores the generated queries in the triplestore
 
 **Configuration:**
+
 * Port: `40121`
 * Environment variables (via `.env` file): Same as NEL component
 
@@ -113,6 +120,7 @@ The Query Executer component:
 * Stores query results in the triplestore
 
 **Configuration:**
+
 * Port: `40122`
 * Environment variables (via `.env` file):
   * `SPARQL_ENDPOINT`: SPARQL endpoint URL (e.g., `https://query.wikidata.org/sparql`)
