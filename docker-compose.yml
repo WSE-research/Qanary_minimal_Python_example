@@ -1,0 +1,87 @@
+services:
+  virtuoso:
+    image: wseresearch/qanary-virtuoso:latest
+    container_name: "Virtuoso-Triplestore"
+    network_mode: host # usage of ports also possible
+    env_file:
+      - ./Virtuoso-triplestore/.env # use .env file for environment variables
+  qanary-pipeline: 
+    depends_on:
+      - virtuoso
+    environment: # set environment variables for the pipeline
+      - SPRING_BOOT_ADMIN_URL=http://0.0.0.0:40111
+      - SPRING_BOOT_ADMIN_USERNAME=admin
+      - SPRING_BOOT_ADMIN_PASSWORD=admin
+      - SERVER_HOST=http://0.0.0.0
+      - SERVER_PORT=40111
+      - SERVICE_NAME_COMPONENT=Qanary-Pipeline
+      - SERVICE_DESCRIPTION_COMPONENT=Qanary-Pipeline
+      - VIRTUOSO_URL=jdbc:virtuoso://127.0.0.1:1111
+      - VIRTUOSO_USERNAME=rw
+      - VIRTUOSO_PASSWORD=rw
+      - REST_TEMPLATE_SETTING=logging
+    ports:
+      - 40111:40111
+    image: qanary/qanary-pipeline:latest # use Dockerhub image
+    container_name: "Qanary-Pipeline"
+    network_mode: host # usage of ports also possible
+  qanary-component-nel-python-wikidata-lookup: # for building from source
+    depends_on:
+      qanary-pipeline:
+        condition: service_started
+    environment:
+      - SERVER_HOST=http://localhost
+      - SERVER_PORT=40120
+    build:
+      context: ./Qanary-Component-NEL-WikidataLookup
+      dockerfile: Dockerfile
+    env_file:
+      - ./Qanary-Component-NEL-WikidataLookup/.env
+    container_name: "NEL-Wikidata-Lookup"
+    network_mode: host # usage of ports also possible
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:40120/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  qanary-component-qb-wikidata: # for building from source
+    depends_on:
+      qanary-pipeline:
+        condition: service_started
+    environment:
+      - SERVER_HOST=http://localhost
+      - SERVER_PORT=40121
+    build:
+      context: ./Qanary-Component-QueryBuilder-Wikidata
+      dockerfile: Dockerfile
+    env_file:
+      - ./Qanary-Component-QueryBuilder-Wikidata/.env
+    container_name: "QB-Wikidata"
+    network_mode: host # usage of ports also possible
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:40121/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  qanary-component-qe-sparqlexecuter: # this component was already created by someone and pushed to dockerhub
+    depends_on:
+      qanary-pipeline:
+        condition: service_started
+    environment:
+      - SERVER_HOST=http://localhost
+      - SERVER_PORT=40122
+    build:
+      context: ./Qanary-Component-QE-SparqlExecuter
+      dockerfile: Dockerfile
+    network_mode: host # or use ports
+    container_name: "QE-SparqlExecuter"
+    env_file:
+      - ./Qanary-Component-QE-SparqlExecuter/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:40122/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

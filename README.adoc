@@ -1,0 +1,316 @@
+:toc:
+:toclevels: 5
+:toc-placement!:
+:source-highlighter: highlight.js
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+= Qanary Minimal Question Answering Pipeline
+
+== Table of Contents
+toc::[]
+
+== Overview
+
+This project implements a minimal Question Answering (QA) pipeline using the Qanary framework and 3 components implemented in Python. 
+The pipeline processes natural-language questions and generates answers by:
+
+1. **Named Entity Linking (NEL)**: Identifying and linking entities in questions to Wikidata
+2. **Query Building (QB)**: Constructing SPARQL queries from annotated entities
+3. **Query Execution (QE)**: Executing SPARQL queries against a SPARQL endpoint
+
+The system uses Wikidata as the knowledge base and Virtuoso as the triplestore for managing RDF data.
+
+== Architecture
+
+The pipeline consists of the following services:
+
+* **Virtuoso Triplestore**: RDF database for storing question annotations and intermediate results (port jdbc:1111 and web:8890 are used)
+* **Qanary Pipeline**: Central orchestrator that coordinates the QA components (port 40111)
+* **NEL-Wikidata-Lookup**: Named Entity Linking component that identifies entities in questions (port 40120)
+* **QB-Wikidata**: Query Builder component that constructs SPARQL queries (port 40121)
+* **QE-SparqlExecuter**: Query Executer component that executes SPARQL queries (port 40122)
+
+== Prerequisites
+
+* Docker and Docker Compose installed
+* Sufficient system resources (RAM, CPU) for running multiple containers
+* Network access for downloading Docker images and accessing Wikidata API
+
+== Project Structure
+
+[source,text]
+----
+.
+├── docker-compose.yml                    # Service orchestration configuration
+├── Qanary-Component-NEL-WikidataLookup/  # Named Entity Linking component
+│   ├── component/
+│   │   └── nel_wikidata_lookup.py       # Main NEL logic
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run.py                            # FastAPI application entry point
+├── Qanary-Component-QueryBuilder-Wikidata/ # Query Builder component
+│   ├── component/
+│   │   └── qb_wikidata.py                # Main QB logic
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run.py
+├── Qanary-Component-QE-SparqlExecuter/   # Query Executer component
+│   ├── component/
+│   │   └── qe_sparqlexecuter.py         # Main QE logic
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run.py
+└── Virtuoso-triplestore/
+    └── .env                              # Virtuoso configuration
+----
+
+== Components
+
+=== NEL-Wikidata-Lookup
+
+The Named Entity Linking component:
+
+* Extracts n-grams from the input question
+* Searches Wikidata for matching entities
+* Annotates the question with identified entity URIs
+* Stores annotations in the Virtuoso triplestore
+
+**Configuration:**
+* Port: `40120`
+* Environment variables (via `.env` file):
+  * `SERVICE_NAME_COMPONENT`: Component name
+  * `SERVICE_DESCRIPTION_COMPONENT`: Component description
+  * `SPRING_BOOT_ADMIN_URL`: URL for Spring Boot Admin registration
+  * `SPRING_BOOT_ADMIN_USERNAME`: Admin username
+  * `SPRING_BOOT_ADMIN_PASSWORD`: Admin password
+  * `MIN_NGRAM`: Minimum n-gram size (default: 2)
+  * `MAX_NGRAM`: Maximum n-gram size (default: 4)
+
+=== QB-Wikidata
+
+The Query Builder component:
+
+* Reads entity annotations from the triplestore
+* Constructs SPARQL queries targeting Wikidata
+* Stores the generated queries in the triplestore
+
+**Configuration:**
+* Port: `40121`
+* Environment variables (via `.env` file): Same as NEL component
+
+=== QE-SparqlExecuter
+
+The Query Executer component:
+
+* Retrieves SPARQL queries from the triplestore
+* Executes queries against configured SPARQL endpoints (e.g., Wikidata)
+* Stores query results in the triplestore
+
+**Configuration:**
+* Port: `40122`
+* Environment variables (via `.env` file):
+  * `SPARQL_ENDPOINT`: SPARQL endpoint URL (e.g., `https://query.wikidata.org/sparql`)
+  * Other variables same as NEL component
+
+== Getting Started
+
+=== 1. Clone the Repository
+
+[source,bash]
+----
+git clone <repository-url>
+cd qanary/general-purpose
+----
+
+=== 2. Configure Environment Variables
+
+Each component requires a `.env` file with the necessary configuration. Create or update the following files:
+
+* `Qanary-Component-NEL-WikidataLookup/.env`
+* `Qanary-Component-QueryBuilder-Wikidata/.env`
+* `Qanary-Component-QE-SparqlExecuter/.env`
+* `Virtuoso-triplestore/.env`
+
+Example `.env` file for components:
+
+[source,properties]
+----
+SERVICE_NAME_COMPONENT=Component-Name
+SERVICE_DESCRIPTION_COMPONENT=Component Description
+SPRING_BOOT_ADMIN_URL=http://localhost:40111
+SPRING_BOOT_ADMIN_USERNAME=admin
+SPRING_BOOT_ADMIN_PASSWORD=admin
+----
+
+For QE component, also add:
+
+[source,properties]
+----
+SPARQL_ENDPOINT=https://query.wikidata.org/sparql
+----
+
+=== 3. Build and Start Services
+
+[source,bash]
+----
+# Build and start all services
+docker-compose up --build
+
+# Or run in detached mode
+docker-compose up --build -d
+----
+
+=== 4. Verify Services
+
+Check that all services are running:
+
+[source,bash]
+----
+docker-compose ps
+----
+
+You should see all services in "Up" or "Up (healthy)" status.
+
+Access the Qanary Pipeline dashboard at: `http://localhost:40111`
+
+== Service Ports
+
+|===
+| Service | Port | Description
+| Virtuoso | 1111 | SPARQL endpoint
+| Qanary-Pipeline | 40111 | Main pipeline orchestrator
+| NEL-Wikidata-Lookup | 40120 | Named Entity Linking
+| QB-Wikidata | 40121 | Query Builder
+| QE-SparqlExecuter | 40122 | Query Executer
+|===
+
+== Health Checks
+
+All components include health check endpoints at `/health`. Health checks are configured in `docker-compose.yml` to ensure services are ready before the pipeline attempts to connect.
+
+* Health check interval: 15 seconds
+* Timeout: 5 seconds
+* Retries: 5
+* Start period: 30 seconds
+
+== Network Configuration
+
+All services use `network_mode: host` for simplified networking. This means:
+
+* Services bind directly to the host network
+* No port mapping conflicts
+* Services can communicate via `localhost`
+
+**Important:** When registering service URLs, use `localhost` instead of `0.0.0.0` to ensure proper connectivity.
+
+== Usage
+
+Once all services are running, you can interact with the Qanary Pipeline through its REST API. The pipeline will:
+
+1. Receive a natural language question
+2. Route it through the NEL component for entity identification
+3. Pass annotated entities to the QB component for query construction
+4. Execute the query via the QE component
+5. Return the results
+
+Example question: "Who is the inventor of the Hawaiian Pizza?"
+
+Example API call (refer to Qanary documentation for exact endpoint format):
+
+[source,bash]
+----
+curl -X POST http://localhost:40111/api/question \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the capital of France?"}'
+----
+
+== Troubleshooting
+
+=== Connection Refused Errors
+
+If you encounter connection refused errors:
+
+* Ensure all services are running: `docker-compose ps`
+* Check service logs: `docker-compose logs <service-name>`
+* Verify environment variables are correctly set in `.env` files
+* Ensure `SERVER_HOST` uses `http://localhost` (not `http://0.0.0.0`) for service registration
+
+=== Components Not Registering
+
+If components fail to register with the Pipeline:
+
+* Verify `SPRING_BOOT_ADMIN_URL` points to `http://localhost:40111`
+* Check that the Pipeline service is running before components start
+* Review component logs for registration errors
+
+=== Health Check Failures
+
+If health checks fail:
+
+* Ensure `curl` is installed in component containers
+* Check that services are binding to the correct ports
+* Verify network connectivity between services
+
+== Development
+
+=== Building Individual Components
+
+[source,bash]
+----
+# Build a specific component
+docker-compose build qanary-component-nel-python-wikidata-lookup
+----
+
+=== Viewing Logs
+
+[source,bash]
+----
+# View all logs
+docker-compose logs
+
+# View logs for a specific service
+docker-compose logs qanary-pipeline
+
+# Follow logs in real-time
+docker-compose logs -f
+----
+
+=== Stopping Services
+
+[source,bash]
+----
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+----
+
+== Dependencies
+
+=== Python Components
+
+* `fastapi`: Web framework
+* `uvicorn`: ASGI server
+* `qanary_helpers`: Qanary framework utilities
+* `requests`: HTTP client (NEL component)
+* `nltk`: Natural language processing (NEL component)
+* `SPARQLWrapper`: SPARQL query execution (QE component)
+
+=== Docker Images
+
+* `qanary/qanary-pipeline:latest`: Qanary Pipeline orchestrator
+* `wseresearch/qanary-virtuoso:latest`: Virtuoso triplestore
+
+== References
+
+* https://github.com/WDAqua/Qanary[Qanary Framework]
+* https://www.wikidata.org[Wikidata]
+* https://virtuoso.openlinksw.com[Virtuoso]
+

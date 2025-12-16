@@ -1,0 +1,15 @@
+FROM python:3.9-slim
+
+WORKDIR /home/falcon-component
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN pip install --upgrade pip -r requirements.txt; exit 0
+RUN pip install "uvicorn[standard]"
+
+COPY component/ ./component/
+COPY run.py  ./
+
+ENTRYPOINT uvicorn run:app --host 0.0.0.0 --port $SERVER_PORT 
+# for additional options see uvicorn documentation
