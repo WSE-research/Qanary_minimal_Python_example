@@ -1,15 +1,15 @@
 FROM python:3.9-slim
 
-WORKDIR /home/falcon-component
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
-RUN pip install --upgrade pip -r requirements.txt; exit 0
-RUN pip install "uvicorn[standard]"
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY component/ ./component/
-COPY run.py  ./
+COPY run.py ./
 
-ENTRYPOINT uvicorn run:app --host 0.0.0.0 --port $SERVER_PORT 
+# shell form so $SERVER_PORT is expanded at container start
+ENTRYPOINT uvicorn run:app --host 0.0.0.0 --port $SERVER_PORT
 # for additional options see uvicorn documentation

@@ -1,4 +1,3 @@
-qanary_helpers
-fastapi
-requests
-nltk
+qanary-helpers==0.3.2
+fastapi==0.128.8
+uvicorn[standard]==0.39.0
