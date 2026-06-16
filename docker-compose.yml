@@ -5,7 +5,24 @@ services:
     network_mode: host # usage of ports also possible
     env_file:
       - ./Virtuoso-triplestore/.env # use .env file for environment variables
-  qanary-pipeline: 
+  wikidata-dataset: # local Wikidata mirror so the test question can be answered offline (no public WDQS)
+    image: wseresearch/qanary-virtuoso:latest
+    container_name: "Wikidata-Dataset"
+    network_mode: host # runs on ports 1112/8891 (see ./Wikidata-dataset/.env)
+    env_file:
+      - ./Wikidata-dataset/.env
+  wikidata-dataset-loader: # loads the Wikidata subset (ttl) on demand once the dataset Virtuoso is up
+    image: curlimages/curl:latest
+    container_name: "Wikidata-Dataset-Loader"
+    depends_on:
+      - wikidata-dataset
+    network_mode: host
+    restart: "no"
+    volumes:
+      - ./Wikidata-dataset/wikidata-subset.ttl:/data/wikidata-subset.ttl:ro
+      - ./Wikidata-dataset/load.sh:/load.sh:ro
+    entrypoint: ["sh", "/load.sh"]
+  qanary-pipeline:
     depends_on:
       - virtuoso
     environment: # set environment variables for the pipeline
