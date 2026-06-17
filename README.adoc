@@ -18,14 +18,22 @@ toc::[]
 
 == Overview
 
-This project implements a minimal Question Answering (QA) pipeline using the Qanary framework and 3 components implemented in Python. 
-The pipeline processes natural-language questions and generates answers by:
+This project implements a minimal Question Answering (QA) pipeline using the Qanary framework.
+It mixes **3 components implemented in Python** with **1 component implemented in Java** (the
+Java component, `LD-Java`, demonstrates that components in different programming languages
+cooperate in one Qanary pipeline). The pipeline processes natural-language questions and
+generates answers by:
 
-1. **Named Entity Linking (NEL)**: Identifying and linking entities in questions to Wikidata
-2. **Query Building (QB)**: Constructing SPARQL queries from annotated entities
-3. **Query Execution (QE)**: Executing SPARQL queries against a SPARQL endpoint
+1. **Language Detection (LD, Java)**: Annotating the question with its language
+2. **Named Entity Linking (NEL)**: Identifying and linking entities in questions to Wikidata
+3. **Query Building (QB)**: Constructing SPARQL queries from annotated entities
+4. **Query Execution (QE)**: Executing SPARQL queries against a SPARQL endpoint
 
 The system uses Wikidata as the knowledge base and Virtuoso as the triplestore for managing RDF data.
+
+NOTE: This mirrors the sibling `Qanary_minimal_Java_Python_example`; the `qanary-component-LD-Java`
+component is kept identical in both. Because a Qanary component is just a Spring Boot Admin client,
+a Java and a Python component are indistinguishable to the pipeline.
 
 For the sake of simplicity, the docker-compose.yml is kept with trivial components' settings where all components are in the host network.
 For the same reason, the Virtuoso configuration is predefined with dummy values. 
@@ -37,6 +45,7 @@ The pipeline consists of the following services:
 
 * **Virtuoso Triplestore**: RDF database for storing question annotations and intermediate results (port jdbc:1111 and web:8890 are used)
 * **Qanary Pipeline**: Central orchestrator that coordinates the QA components (port 40111)
+* **LD-Java**: Language-Detection component, implemented in **Java** (port 40123)
 * **NEL-Wikidata-Lookup**: Named Entity Linking component that identifies entities in questions (port 40120)
 * **QB-Wikidata**: Query Builder component that constructs SPARQL queries (port 40121)
 * **QE-SparqlExecuter**: Query Executer component that executes SPARQL queries (port 40122)
@@ -53,6 +62,13 @@ The pipeline consists of the following services:
 ----
 .
 ├── docker-compose.yml                    # Service orchestration configuration
+├── build.sh                              # builds the Java component jar (run before docker compose)
+├── qanary-component-LD-Java/             # Language Detection component (JAVA)
+│   ├── src/main/java/.../Application.java   # Spring Boot entry point + QanaryComponent bean
+│   ├── src/main/java/.../LanguageDetector.java # annotates the question language
+│   ├── src/main/resources/application.properties
+│   ├── Dockerfile                        # packages the host-built jar
+│   └── pom.xml                           # depends on the Qanary framework (qa.component 4.0.0)
 ├── Qanary-Component-NEL-WikidataLookup/  # Named Entity Linking component
 │   ├── component/
 │   │   └── nel_wikidata_lookup.py       # Main NEL logic
@@ -76,6 +92,31 @@ The pipeline consists of the following services:
 ----
 
 == Components
+
+=== LD-Java (Java component)
+
+A minimal Qanary component implemented in **Java** (Spring Boot, on top of the Qanary
+`qa.component` framework). It:
+
+* reads the question from the triplestore,
+* detects the question language (a trivial placeholder that returns `en`; replace
+  `LanguageDetector.detectLanguage(...)` with a real detector as needed),
+* stores the result as a `qa:AnnotationOfQuestionLanguage` annotation.
+
+Its only purpose is to show a Java component running side by side with the Python ones;
+to the pipeline it looks the same as any other component.
+
+**Configuration:**
+
+* Port: `40123`
+* Environment variables (set in `docker-compose.yml`): `SERVICE_NAME_COMPONENT` (registers
+  the component as `LD-Java`), `SERVICE_DESCRIPTION_COMPONENT`, `SERVER_HOST`, `SERVER_PORT`,
+  and the `SPRING_BOOT_ADMIN_*` registration settings.
+
+IMPORTANT: The jar is **built on the host** (`./build.sh`) before `docker compose up`, because
+the Qanary framework (`qa.component` 4.0.0) is a local Maven build, not published to Maven
+Central, and cannot be resolved from inside a clean Docker build container. The framework must
+be installed in the local Maven repository first (see `build.sh`).
 
 === NEL-Wikidata-Lookup
 
@@ -163,7 +204,20 @@ For QE component, also add:
 SPARQL_ENDPOINT=https://query.wikidata.org/sparql
 ----
 
-=== 3. Build and Start Services
+=== 3. Build the Java component jar
+
+The Java component must be packaged on the host first (the Qanary framework it depends on is a
+local Maven build, not on Maven Central — see the IMPORTANT note in the *LD-Java (Java component)*
+section above):
+
+[source,bash]
+----
+./build.sh
+----
+
+The Python components need no host build step (they are built from source by docker compose).
+
+=== 4. Build and Start Services
 
 [source,bash]
 ----
@@ -174,7 +228,7 @@ docker-compose up --build
 docker-compose up --build -d
 ----
 
-=== 4. Verify Services
+=== 5. Verify Services
 
 Check that all services are running:
 
@@ -185,7 +239,12 @@ docker-compose ps
 
 You should see all services in "Up" or "Up (healthy)" status.
 
-Access the Qanary Pipeline dashboard at: `http://localhost:40111`
+Access the Qanary Pipeline dashboard (Spring Boot Admin) at: `http://localhost:40111`
+
+The interactive **web frontend** is served at: `http://localhost:40111/qa` — enter a
+question, configure the component pipeline by drag-and-drop, and inspect the
+generated SPARQL query, the answer table, and the embedded SPARQL editor (see the
+Qanary pipeline README for the full feature list).
 
 == Service Ports
 
@@ -193,9 +252,10 @@ Access the Qanary Pipeline dashboard at: `http://localhost:40111`
 | Service | Port | Description
 | Virtuoso | 1111 | SPARQL endpoint
 | Qanary-Pipeline | 40111 | Main pipeline orchestrator
-| NEL-Wikidata-Lookup | 40120 | Named Entity Linking
-| QB-Wikidata | 40121 | Query Builder
-| QE-SparqlExecuter | 40122 | Query Executer
+| NEL-Wikidata-Lookup | 40120 | Named Entity Linking (Python)
+| QB-Wikidata | 40121 | Query Builder (Python)
+| QE-SparqlExecuter | 40122 | Query Executer (Python)
+| LD-Java | 40123 | Language Detection (Java)
 |===
 
 == Health Checks
@@ -219,7 +279,9 @@ All services use `network_mode: host` for simplified networking. This means:
 
 == Usage
 
-Once all services are running, you can interact with the Qanary Pipeline through its REST API. The pipeline will:
+Once all services are running, you can interact with the Qanary Pipeline either
+through the **web frontend** at `http://localhost:40111/qa` (no coding required) or
+through its REST API. The pipeline will:
 
 1. Receive a natural language question
 2. Route it through the NEL component for entity identification
@@ -310,6 +372,13 @@ docker-compose down -v
 * `requests`: HTTP client (NEL component)
 * `nltk`: Natural language processing (NEL component)
 * `SPARQLWrapper`: SPARQL query execution (QE component)
+
+=== Java Component
+
+* JDK 21 and Maven (to run `./build.sh`)
+* `eu.wdaqua.qanary:qa.component:4.0.0`: the Qanary component framework (local Maven build —
+  install it first, see `build.sh`); it transitively provides Spring Boot, the Spring Boot Admin
+  client and Apache Jena
 
 === Docker Images
 

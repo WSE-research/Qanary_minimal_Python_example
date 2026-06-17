@@ -42,6 +42,8 @@ services:
     image: qanary/qanary-pipeline:latest # use Dockerhub image
     container_name: "Qanary-Pipeline"
     network_mode: host # usage of ports also possible
+    # retry if Virtuoso's ISQL port (1111) isn't accepting connections yet at startup
+    restart: on-failure
   qanary-component-nel-python-wikidata-lookup: # for building from source
     depends_on:
       qanary-pipeline:
@@ -102,3 +104,27 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+  # --- Java component (built from source; run ./build.sh to build the jar first) ---
+  qanary-component-ld-java:
+    depends_on:
+      qanary-pipeline:
+        condition: service_started
+    environment:
+      - SERVER_HOST=http://localhost
+      - SERVER_PORT=40123
+      - SPRING_BOOT_ADMIN_URL=http://localhost:40111
+      - SPRING_BOOT_ADMIN_USERNAME=admin
+      - SPRING_BOOT_ADMIN_PASSWORD=admin
+      - SERVICE_NAME_COMPONENT=LD-Java
+      - SERVICE_DESCRIPTION_COMPONENT=Detects the question language (Java example component)
+    build:
+      context: ./qanary-component-LD-Java
+      dockerfile: Dockerfile
+    container_name: "LD-Java"
+    network_mode: host # usage of ports also possible
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:40123/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s

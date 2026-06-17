@@ -16,7 +16,9 @@ body = {
     "question": question,
     "additionaltriples": "",
     "componentfilterinput": "",
-    "componentlist[]": ["NEL-WikidataLookup", "QB-Wikidata", "QE-SparqlExecuter"]
+    # LD-Java is a Java-implemented component (language detection); the rest are
+    # Python. It demonstrates a Java + Python pipeline running together.
+    "componentlist[]": ["LD-Java", "NEL-WikidataLookup", "QB-Wikidata", "QE-SparqlExecuter"]
 }
 
 
@@ -63,6 +65,7 @@ sparql_wrapper.setReturnFormat(JSON)
 result = sparql_wrapper.query().convert()
 
 logging.info(f"Activated process stored the data in the graph {outGraph}")
+java_component_annotations = 0
 if "results" in result and "bindings" in result["results"] and len(result["results"]["bindings"]) > 0:
     for bind in result["results"]["bindings"]:
         component = bind["component"]["value"]
@@ -85,6 +88,18 @@ if "results" in result and "bindings" in result["results"] and len(result["resul
                 result_count["results"]["bindings"][0]["numAnnotations"]["value"])
         logging.info(
             f"Component {component} has {num_annotations} annotations in the graph.")
+        # the Java component registers as urn:qanary:LD-Java (see LanguageDetector.java)
+        if "LD-Java" in component:
+            java_component_annotations += num_annotations
+
+# verify the Java-implemented component actually contributed to the pipeline
+if java_component_annotations > 0:
+    logging.info(
+        f"Java component LD-Java contributed {java_component_annotations} annotation(s).")
+else:
+    logging.error(
+        "No annotation by the Java component LD-Java (urn:qanary:LD-Java) found in the graph.")
+    exit(1)
 
     # query the triplestore for the stored answer in the outGraph
 sparql_select_to_get_answer_json = """

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- align Spring Boot with the current Qanary framework (qa.* 4.0.0) -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.15</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>eu.wdaqua.qanary.component</groupId>
+    <artifactId>qanary-component-LD-Java</artifactId>
+    <version>1.0.0</version>
+    <name>Qanary component: Language Detection (Java)</name>
+    <description>Minimal Java Qanary component for the Java+Python system example</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <qanary.version>4.0.0</qanary.version>
+    </properties>
+
+    <dependencies>
+        <!-- the Qanary component framework (pulls commons, web, thymeleaf, SBA client transitively) -->
+        <dependency>
+            <groupId>eu.wdaqua.qanary</groupId>
+            <artifactId>qa.component</artifactId>
+            <version>${qanary.version}</version>
+        </dependency>
+        <!-- JUnit 5 + Spring test (TestRestTemplate) for the Swagger availability test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- AbstractSwaggerUiAvailabilityTest lives in the qa.component test-jar -->
+        <dependency>
+            <groupId>eu.wdaqua.qanary</groupId>
+            <artifactId>qa.component</artifactId>
+            <version>${qanary.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>qanary-component-ld-java</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
