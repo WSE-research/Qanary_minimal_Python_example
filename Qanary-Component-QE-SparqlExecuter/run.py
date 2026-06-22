@@ -17,8 +17,6 @@ SERVER_PORT = os.environ['SERVER_PORT']
 SPRING_BOOT_ADMIN_URL = os.environ['SPRING_BOOT_ADMIN_URL']
 SPRING_BOOT_ADMIN_USERNAME = os.environ['SPRING_BOOT_ADMIN_USERNAME']
 SPRING_BOOT_ADMIN_PASSWORD = os.environ['SPRING_BOOT_ADMIN_PASSWORD']
-# Construct registration URL: replace 0.0.0.0 with 127.0.0.1 and include port
-# registration_host = SERVER_HOST  # .replace('0.0.0.0', '127.0.0.1')
 
 if len(SERVER_PORT) > 0:
     URL_COMPONENT = f"{SERVER_HOST}:{SERVER_PORT}"
@@ -59,5 +57,5 @@ registration = Registration(
 
 reg_thread = Registrator(SPRING_BOOT_ADMIN_URL, SPRING_BOOT_ADMIN_USERNAME,
                          SPRING_BOOT_ADMIN_PASSWORD, registration)
-reg_thread.setDaemon(True)
+reg_thread.daemon = True
 reg_thread.start()

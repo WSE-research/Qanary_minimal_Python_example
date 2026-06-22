@@ -57,5 +57,5 @@ registration = Registration(
 
 reg_thread = Registrator(SPRING_BOOT_ADMIN_URL, SPRING_BOOT_ADMIN_USERNAME,
                          SPRING_BOOT_ADMIN_PASSWORD, registration)
-reg_thread.setDaemon(True)
+reg_thread.daemon = True
 reg_thread.start()
