@@ -1,0 +1,21 @@
+{
+  "description": "Predefined end-to-end test cases for the Qanary minimal Python example. Every question is answerable from the local Wikidata subset (Wikidata-dataset/wikidata-subset.ttl, built around 'Hawaiian pizza' / wd:Q590076), so the expected facts appear deterministically in the answer the pipeline stores — no public Wikidata Query Service needed. Each case sends the question through the LD-Java -> NEL -> QB -> QE pipeline and asserts that every string in 'expected_contains' is present in the stored JSON answer.",
+  "default_components": ["LD-Java", "NEL-WikidataLookup", "QB-Wikidata", "QE-SparqlExecuter"],
+  "cases": [
+    {
+      "name": "inventor-of-hawaiian-pizza",
+      "question": "Who is the inventor of the Hawaiian Pizza?",
+      "expected_contains": ["Sam Panopoulos"]
+    },
+    {
+      "name": "origin-of-hawaiian-pizza",
+      "question": "Where does the Hawaiian pizza come from?",
+      "expected_contains": ["Canada"]
+    },
+    {
+      "name": "ingredients-of-hawaiian-pizza",
+      "question": "What is the Hawaiian pizza made from?",
+      "expected_contains": ["pineapple", "tomato sauce"]
+    }
+  ]
+}

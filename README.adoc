@@ -63,6 +63,16 @@ The pipeline consists of the following services:
 .
 ├── docker-compose.yml                    # Service orchestration configuration
 ├── build.sh                              # builds the Java component jar (run before docker compose)
+├── run-e2e-tests.sh                      # offline end-to-end test runner (build + up + test + tear down)
+├── qanary_client.py                      # simple demo client (one question)
+├── e2e/
+│   ├── e2e_test.py                       # validates predefined questions against expected answers
+│   ├── testcases.json                    # predefined questions + expected facts
+│   └── requirements.txt
+├── Wikidata-dataset/                     # local Wikidata subset so the example answers offline
+│   ├── wikidata-subset.ttl               # the data (generated)
+│   ├── build-dataset.py                  # regenerates the subset from the Wikidata Action API
+│   └── load.sh                           # loads the subset into the dataset triplestore
 ├── qanary-component-LD-Java/             # Language Detection component (JAVA)
 │   ├── src/main/java/.../Application.java   # Spring Boot entry point + QanaryComponent bean
 │   ├── src/main/java/.../LanguageDetector.java # annotates the question language
@@ -299,6 +309,73 @@ curl -X POST http://localhost:40111/api/question \
   -H "Content-Type: application/json" \
   -d '{"question": "What is the capital of France?"}'
 ----
+
+== End-to-end tests
+
+The repository ships an **offline, deterministic end-to-end test** that drives the
+whole pipeline (LD-Java + the Python components) with a set of predefined questions
+and checks that the expected facts appear in the answer. Because
+`QE-SparqlExecuter` is pointed at the bundled local Wikidata subset
+(`Wikidata-dataset/wikidata-subset.ttl`, built around _Hawaiian pizza_), the answers
+are reproducible and need **no public Wikidata Query Service**.
+
+The same script is used by CI and locally:
+
+[source,bash]
+----
+./run-e2e-tests.sh
+----
+
+It builds the Java component, runs `docker compose up --build`, waits until the
+pipeline, the components and the dataset are ready, runs the test cases, and tears
+the stack down again (set `KEEP_RUNNING=1` to leave it up). It exits non-zero if any
+case fails.
+
+=== Predefined questions and expected answers
+
+The cases live in `e2e/testcases.json` — each is a question plus the strings that
+must occur in the stored answer:
+
+[source,json]
+----
+{
+  "default_components": ["LD-Java", "NEL-WikidataLookup", "QB-Wikidata", "QE-SparqlExecuter"],
+  "cases": [
+    { "name": "inventor-of-hawaiian-pizza",
+      "question": "Who is the inventor of the Hawaiian Pizza?",
+      "expected_contains": ["Sam Panopoulos"] }
+  ]
+}
+----
+
+Add a case by appending to `cases`. The question must be answerable from the local
+dataset (i.e. about _Hawaiian pizza_); to answer other questions, extend
+`Wikidata-dataset/build-dataset.py` (add the subject Q-IDs) and regenerate the
+subset. Phrase questions so that `NEL-WikidataLookup` links **only** the dataset
+entity — wording that also matches other Wikidata items (e.g. the phrase "country
+of origin") can make the query builder pick an entity that is not in the local
+subset, leaving the answer empty.
+
+=== Running the checks against an already-running stack
+
+`e2e/e2e_test.py` is the reusable validator. With the stack already up
+(`docker compose up -d`) you can run just the assertions:
+
+[source,bash]
+----
+pip install -r e2e/requirements.txt
+python3 e2e/e2e_test.py
+----
+
+It is configurable via `QANARY_PIPELINE_URL` (default `http://localhost:40111`),
+`DATASET_SPARQL_ENDPOINT` (default `http://localhost:8891/sparql`),
+`READINESS_TIMEOUT` and `E2E_TESTCASES`.
+
+=== Continuous integration
+
+`.github/workflows/e2e-tests.yml` runs `run-e2e-tests.sh` on every push and pull
+request to `main` (and on demand via _workflow dispatch_), so the full
+pipeline + components are validated automatically against the predefined answers.
 
 == Troubleshooting
 
