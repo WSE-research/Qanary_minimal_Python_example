@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.15</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -21,7 +21,7 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <qanary.version>4.0.0</qanary.version>
+        <qanary.version>5.0.1</qanary.version>
     </properties>
 
     <dependencies>
@@ -35,6 +35,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Spring Boot 4 split TestRestTemplate into its own module; the
+                 qa.component shared Swagger test base needs it. BOM-managed. -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- AbstractSwaggerUiAvailabilityTest lives in the qa.component test-jar -->
