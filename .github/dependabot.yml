@@ -1,0 +1,49 @@
+# Grouped, weekly dependency updates for every ecosystem in this multi-component
+# example. Grouping minor+patch into one PR per ecosystem keeps the noise down;
+# majors still arrive individually (they need a human + the e2e gate).
+version: 2
+updates:
+  # --- Python components + e2e harness ---
+  - package-ecosystem: pip
+    directories:
+      - "/Qanary-Component-NEL-WikidataLookup"
+      - "/Qanary-Component-QE-SparqlExecuter"
+      - "/Qanary-Component-QueryBuilder-Wikidata"
+      - "/e2e"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- Java (Maven) component ---
+  - package-ecosystem: maven
+    directory: "/qanary-component-LD-Java"
+    schedule:
+      interval: weekly
+    groups:
+      maven-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- Docker base images (one per component image) ---
+  - package-ecosystem: docker
+    directories:
+      - "/Qanary-Component-NEL-WikidataLookup"
+      - "/Qanary-Component-QE-SparqlExecuter"
+      - "/Qanary-Component-QueryBuilder-Wikidata"
+      - "/qanary-component-LD-Java"
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns: ["*"]
+
+  # --- GitHub Actions ---
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
