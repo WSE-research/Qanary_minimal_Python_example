@@ -1,7 +1,6 @@
-# The jar is built on the host (mvn package) because the Qanary framework
-# (qa.component 4.0.0) is a local build, not published to Maven Central — so it
-# cannot be resolved from inside a clean build container. See build.sh / the CI
-# workflow, which build the jar before `docker compose up`.
+# The jar is built on the host (mvn package, see build.sh and the CI workflow)
+# before `docker compose up`; this image only packages it. The Qanary framework
+# (qa.component) comes from Maven Central.
 FROM eclipse-temurin:25-jre
 
 ARG JAR_FILE=target/qanary-component-ld-java.jar
