@@ -1,4 +1,4 @@
 qanary-helpers==0.3.2
-fastapi==0.141.1
-uvicorn[standard]==0.52.4
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
 SPARQLWrapper==2.0.0
