@@ -78,7 +78,7 @@ The pipeline consists of the following services:
 │   ├── src/main/java/.../LanguageDetector.java # annotates the question language
 │   ├── src/main/resources/application.properties
 │   ├── Dockerfile                        # packages the host-built jar
-│   └── pom.xml                           # depends on the Qanary framework (qa.component 4.0.0)
+│   └── pom.xml                           # depends on the Qanary framework (qa.component, from Maven Central)
 ├── Qanary-Component-NEL-WikidataLookup/  # Named Entity Linking component
 │   ├── component/
 │   │   └── nel_wikidata_lookup.py       # Main NEL logic
@@ -123,10 +123,7 @@ to the pipeline it looks the same as any other component.
   the component as `LD-Java`), `SERVICE_DESCRIPTION_COMPONENT`, `SERVER_HOST`, `SERVER_PORT`,
   and the `SPRING_BOOT_ADMIN_*` registration settings.
 
-IMPORTANT: The jar is **built on the host** (`./build.sh`) before `docker compose up`, because
-the Qanary framework (`qa.component` 4.0.0) is a local Maven build, not published to Maven
-Central, and cannot be resolved from inside a clean Docker build container. The framework must
-be installed in the local Maven repository first (see `build.sh`).
+NOTE: The jar is **built on the host** (`./build.sh`) before `docker compose up`; the Docker image only packages it. The Qanary framework (`qa.component`, version `qanary.version` in the component's `pom.xml`) is resolved from Maven Central, so no local framework build is needed.
 
 === NEL-Wikidata-Lookup
 
@@ -216,9 +213,7 @@ SPARQL_ENDPOINT=https://query.wikidata.org/sparql
 
 === 3. Build the Java component jar
 
-The Java component must be packaged on the host first (the Qanary framework it depends on is a
-local Maven build, not on Maven Central — see the IMPORTANT note in the *LD-Java (Java component)*
-section above):
+The Java component must be packaged on the host first, because its Docker image only packages the jar built by `build.sh` (see the note in the *LD-Java (Java component)* section above):
 
 [source,bash]
 ----
@@ -453,9 +448,7 @@ docker-compose down -v
 === Java Component
 
 * JDK 21 and Maven (to run `./build.sh`)
-* `eu.wdaqua.qanary:qa.component:4.0.0`: the Qanary component framework (local Maven build —
-  install it first, see `build.sh`); it transitively provides Spring Boot, the Spring Boot Admin
-  client and Apache Jena
+* `eu.wdaqua.qanary:qa.component` (version `qanary.version` in the component's `pom.xml`, currently 5.0.2): the Qanary component framework from Maven Central; it transitively provides Spring Boot, the Spring Boot Admin client and Apache Jena
 
 === Docker Images
 
